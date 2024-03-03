@@ -25,14 +25,10 @@ static DEBUG_STREAM: OnceLock<TcpStream> = OnceLock::new();
 
 #[ctor::ctor]
 fn main() {
-    DATA_STREAM.get_or_init(|| {
-        let data_stream = TcpStream::connect(config::get_data_address()).unwrap();
-        data_stream
-    });
+    DATA_STREAM.get_or_init(|| TcpStream::connect(config::get_data_address()).unwrap());
 
-    let debug_stream = DEBUG_STREAM.get_or_init(|| {
-        TcpStream::connect(config::get_debug_address()).unwrap()
-    });
+    let debug_stream =
+        DEBUG_STREAM.get_or_init(|| TcpStream::connect(config::get_debug_address()).unwrap());
 
     tracing_subscriber::fmt()
         .with_writer(Mutex::new(debug_stream))
