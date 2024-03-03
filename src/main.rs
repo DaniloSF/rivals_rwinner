@@ -57,16 +57,26 @@ fn main() -> color_eyre::Result<()> {
     info!("Accepted data connection from: {}", data_addr);
 
     let mut debug_stdout = std::io::stdout();
-    // let mut data_stdout = std::io::stdout();
+    let mut cloned_debug_stream = debug_stream
+        .try_clone()
+        .expect("Failed to clone debug_stream");
+    let mut cloned_data_stream = data_stream
+        .try_clone()
+        .expect("Failed to clone data_stream");
 
     // Read the incoming data and send to stdout with std::io::copy in a separate thread
-    let debug_thread = std::thread::spawn(move || read_debug(&mut debug_stream, &mut debug_stdout));
-    let tcp_thread = std::thread::spawn(move || read_data(&mut data_stream));
+    let debug_thread =
+        std::thread::spawn(move || read_debug(&mut cloned_debug_stream, &mut debug_stdout));
+    let tcp_thread = std::thread::spawn(move || read_data(&mut cloned_data_stream));
 
     debug_thread.join().unwrap();
     tcp_thread.join().unwrap();
 
-    info!("Does this run");
+    syringe.eject(_injected_payload).unwrap();
+    info!("Ejected!");
+
+    debug_stream.shutdown(std::net::Shutdown::Both).unwrap();
+    data_stream.shutdown(std::net::Shutdown::Both).unwrap();
 
     Ok(())
 }
@@ -78,14 +88,14 @@ fn read_debug(stream: &mut TcpStream, stdout: &mut Stdout) {
 // read the data from the stream, convert bytes into f64 then to i32
 fn read_data(stream: &mut TcpStream) {
     let mut buffer = [0; 8];
-    stream.read_exact(&mut buffer).unwrap();
+    while let Ok(n) = stream.read(&mut buffer) {
+        let data = f64::from_ne_bytes(buffer);
+        let player_winner = data as i32;
 
-    let data = f64::from_ne_bytes(buffer);
-    let player_winner = data as i32;
-
-    info!("Player won: {}", player_winner);
-    if DATA_SENDER.get().is_some() {
-        send_data_ipc(player_winner);
+        info!("Player won: {}", player_winner);
+        if DATA_SENDER.get().is_some() {
+            send_data_ipc(player_winner);
+        }
     }
 }
 

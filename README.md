@@ -39,6 +39,14 @@ The project includes a `config.ini` file where you can customize the tool's beha
 
 You can modify these settings as per your requirements. If the `config.ini` file is not found in the same directory as the executable, the tool will create a new one with default settings.
 
+## Build
+
+To build this project, you will need to have Rust installed on your system. Additionally, you will need to use the nightly Rust toolchain.
+
+To add the nightly toolchain with the correct target, run the following command in your terminal: `rustup target add i686-pc-windows-msvc --toolchain nightly`
+
+Following this, the project is setup to compile, run `cargo build ; cargo run` to compile
+
 ## Note
 
 This tool is intended for educational purposes only. Use at your own risk.
