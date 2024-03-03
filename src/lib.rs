@@ -23,6 +23,7 @@ static_detour! {
 static DATA_STREAM: OnceLock<TcpStream> = OnceLock::new();
 static DEBUG_STREAM: OnceLock<TcpStream> = OnceLock::new();
 
+// Entry point for the DLL, initializes the data and debug streams
 #[ctor::ctor]
 fn main() {
     DATA_STREAM.get_or_init(|| TcpStream::connect(config::get_data_address()).unwrap());
@@ -34,19 +35,18 @@ fn main() {
         .with_writer(Mutex::new(debug_stream))
         .init();
 
-    if let Err(e) = unsafe { cmon_work() } {
+    if let Err(e) = unsafe { do_fallible() } {
         clean_up_with_error(e)
     }
 }
 
 #[ctor::dtor]
 fn dtor() {
-    unsafe {
-        SetVarHook.disable().unwrap();
-    }
+    clean_up();
 }
 
-unsafe fn cmon_work() -> color_eyre::Result<()> {
+// Main function for the DLL
+unsafe fn do_fallible() -> color_eyre::Result<()> {
     BASE_ADDRESS = unsafe { get_base_address() };
 
     let set_var_script_address: usize = BASE_ADDRESS + SET_VAR;
@@ -61,6 +61,7 @@ unsafe fn cmon_work() -> color_eyre::Result<()> {
     Ok(())
 }
 
+// Hooked function for the `set_var` script
 #[no_mangle]
 fn gml_script_set_var_hooked(this: *mut YYVar, a2: *mut YYVar) {
     unsafe {
@@ -86,6 +87,7 @@ struct YYVar {
     field_c: i32,
 }
 
+// Get the pointer to the player_won variable
 fn get_player_won_ptr() -> *mut YYVar {
     unsafe {
         let base = (BASE_ADDRESS + PTR_BASE) as *mut u64;
@@ -128,6 +130,7 @@ fn clean_up() {
         .unwrap();
 }
 
+// Make a pointer jump by adding the offset to the pointer and dereferencing it for each offset
 fn make_ptr_jump(ptr: *mut u64, offsets: &[isize]) -> color_eyre::Result<*mut YYVar> {
     let mut ptr_jump = ptr;
 
@@ -153,6 +156,7 @@ fn make_ptr_jump(ptr: *mut u64, offsets: &[isize]) -> color_eyre::Result<*mut YY
     Ok(ptr_jump as *mut YYVar)
 }
 
+// Get the base address of the injected process
 unsafe fn get_base_address() -> usize {
     let module_handle = GetModuleHandleA(PCSTR::null());
     module_handle.unwrap_or(HMODULE(0)).0 as usize

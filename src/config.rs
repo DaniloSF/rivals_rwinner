@@ -5,6 +5,7 @@ use ini::Ini;
 use lazy_static::lazy_static;
 use std::sync::OnceLock;
 
+// Initialize for the first time the settings from the config file when needed
 lazy_static! {
     static ref SETTINGS: Config = {
         let config_path = Path::parent(env::current_exe().unwrap().as_path())
@@ -20,6 +21,7 @@ static DATA_ADDRESS: OnceLock<String> = OnceLock::new();
 static DEBUG_ADDRESS: OnceLock<String> = OnceLock::new();
 static SEND_ADDRESS: OnceLock<String> = OnceLock::new();
 
+// Get the settings from the config file
 fn get_settings(config_path: &Path) -> color_eyre::Result<Config> {
     // check if the config file exists in the same directory as the executable
 
@@ -59,6 +61,7 @@ fn create_default_config(config_path: &str) -> color_eyre::Result<Config> {
     Ok(conf)
 }
 
+// Get the debug address from the config file
 pub fn get_debug_address() -> String {
     let addr = DEBUG_ADDRESS.get_or_init(|| {
         let debug_tcp_ip = SETTINGS
@@ -72,6 +75,7 @@ pub fn get_debug_address() -> String {
     addr.to_string()
 }
 
+// Get the data address from the config file
 pub fn get_data_address() -> String {
     let addr = DATA_ADDRESS.get_or_init(|| {
         let data_tcp_ip = SETTINGS
@@ -85,6 +89,7 @@ pub fn get_data_address() -> String {
     addr.to_string()
 }
 
+// Get the send address from the config file
 pub fn get_send_address() -> String {
     let addr = SEND_ADDRESS.get_or_init(|| {
         let send_tcp_ip = SETTINGS
