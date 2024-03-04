@@ -42,6 +42,7 @@ fn main() {
 
 #[ctor::dtor]
 fn dtor() {
+    info!("Cleaning up...");
     clean_up();
 }
 

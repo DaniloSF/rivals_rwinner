@@ -72,8 +72,10 @@ fn main() -> color_eyre::Result<()> {
     debug_thread.join().unwrap();
     tcp_thread.join().unwrap();
 
-    syringe.eject(_injected_payload).unwrap();
-    info!("Ejected!");
+    if _injected_payload.process().is_alive() && _injected_payload.guess_is_loaded() {
+        syringe.eject(_injected_payload).unwrap();
+        info!("Ejected!");
+    }
 
     debug_stream.shutdown(std::net::Shutdown::Both).unwrap();
     data_stream.shutdown(std::net::Shutdown::Both).unwrap();
@@ -88,7 +90,17 @@ fn read_debug(stream: &mut TcpStream, stdout: &mut Stdout) {
 // read the data from the stream, convert bytes into f64 then to i32
 fn read_data(stream: &mut TcpStream) {
     let mut buffer = [0; 8];
-    while let Ok(n) = stream.read(&mut buffer) {
+    loop {
+        let n = stream.read(&mut buffer);
+        if n.is_err() {
+            info!("Failed to read data from data stream: {}", n.err().unwrap());
+            break;
+        }
+        if n.unwrap() == 0 {
+            info!("Data stream closed");
+            break;
+        }
+
         let data = f64::from_ne_bytes(buffer);
         let player_winner = data as i32;
 
